@@ -45,6 +45,9 @@ export const handlePost = async (c: Context) => {
 			async start(controller) {
 				for await (const chunk of stream) {
 					if (chunk.choices?.[0]?.finish_reason === 'stop') {
+						const data = JSON.stringify(chunk);
+						const payload = `data: ${data}\n\n`;
+						controller.enqueue(encoder.encode(payload));
 						console.log('Stream completed.');
 						controller.close();
 						break;
