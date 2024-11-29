@@ -6,6 +6,7 @@
 > - npm -> pnpm
 > - use hono
 > - fetch -> openai
+> - add function calling example
 
 # blackbeard-extension
 
