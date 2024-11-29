@@ -3,7 +3,7 @@ import { fromBER } from 'asn1js';
 import { Sequence, Integer } from 'asn1js';
 
 interface GitHubKeysPayload {
-	public_keys: Array<{
+	public_keys: ReadonlyArray<{
 		key: string;
 		key_identifier: string;
 		is_current: boolean;
