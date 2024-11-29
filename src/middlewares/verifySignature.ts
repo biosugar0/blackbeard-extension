@@ -25,25 +25,16 @@ function padStart(data: Uint8Array, totalLength: number): Uint8Array {
 	return result;
 }
 
-function parseASN1Signature(signatureBuffer: Uint8Array): Uint8Array {
+function parseASN1Signature(signatureBuffer: Uint8Array<ArrayBuffer>): Uint8Array {
 	const asn1 = fromBER(signatureBuffer.buffer);
-	if (asn1.offset === -1) {
-		throw new Error('Failed to parse signature');
-	}
-	const sequence = asn1.result as Sequence;
-	if (!sequence.valueBlock || sequence.valueBlock.value.length !== 2) {
-		throw new Error('Invalid signature structure');
-	}
-	const rInteger = sequence.valueBlock.value[0] as Integer;
-	const sInteger = sequence.valueBlock.value[1] as Integer;
-	const rArray = new Uint8Array(rInteger.valueBlock.valueHexView);
-	const sArray = new Uint8Array(sInteger.valueBlock.valueHexView);
-	const paddedR = padStart(rArray, 32);
-	const paddedS = padStart(sArray, 32);
-	const rawSignature = new Uint8Array(64);
-	rawSignature.set(paddedR, 0);
-	rawSignature.set(paddedS, 32);
-	return rawSignature;
+	if (asn1.offset === -1) throw new Error('Failed to parse signature');
+
+	const [r, s] = (asn1.result as Sequence).valueBlock.value;
+
+	return new Uint8Array([
+		...padStart(new Uint8Array((r as Integer).valueBlock.valueHexView), 32),
+		...padStart(new Uint8Array((s as Integer).valueBlock.valueHexView), 32),
+	]);
 }
 
 type MiddlewareReturn = Promise<Response | void>;
@@ -79,13 +70,18 @@ export const verifySignature = async (c: Context, next: Next): MiddlewareReturn 
 		}
 
 		const pemToArrayBuffer = (pem: string): ArrayBuffer => {
-			const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
-			const binary = atob(b64);
-			const buffer = new Uint8Array(binary.length);
-			for (let i = 0; i < binary.length; i++) {
-				buffer[i] = binary.charCodeAt(i);
+			try {
+				const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+				const binary = atob(b64);
+				const buffer = new Uint8Array(binary.length);
+				for (let i = 0; i < binary.length; i++) {
+					buffer[i] = binary.charCodeAt(i);
+				}
+				return buffer.buffer;
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+				throw new Error(`Failed to convert PEM to ArrayBuffer: ${errorMessage}`);
 			}
-			return buffer.buffer;
 		};
 
 		const publicKeyBuffer = pemToArrayBuffer(publicKeyEntry.key);
