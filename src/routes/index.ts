@@ -67,7 +67,6 @@ export const handlePost = async (c: Context) => {
 				tool_choice: 'auto',
 				stream: false,
 			});
-			console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
 
 			if (toolResponse.choices?.[0]?.message?.tool_calls) {
 				const toolCall = toolResponse.choices[0].message.tool_calls[0];
