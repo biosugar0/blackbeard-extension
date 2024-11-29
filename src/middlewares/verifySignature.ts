@@ -79,8 +79,7 @@ export const verifySignature = async (c: Context, next: Next): MiddlewareReturn 
 	try {
 		const pemToArrayBuffer = (pem: Readonly<string>): ArrayBuffer => {
 			const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
-			const binary = atob(b64);
-			return Uint8Array.from(binary, (c) => c.charCodeAt(0)).buffer;
+			return Uint8Array.from(atob(b64), (char) => char.charCodeAt(0)).buffer;
 		};
 
 		const publicKeyBuffer = pemToArrayBuffer(publicKeyEntry.key);
