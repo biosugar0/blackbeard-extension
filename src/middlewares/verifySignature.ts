@@ -1,6 +1,5 @@
 import { Context, Next } from 'hono';
-import { fromBER } from 'asn1js';
-import { Sequence, Integer } from 'asn1js';
+import { Sequence, Integer, verifySchema } from 'asn1js';
 
 interface GitHubKeysPayload {
 	readonly public_keys: ReadonlyArray<{
@@ -12,29 +11,36 @@ interface GitHubKeysPayload {
 
 const GITHUB_KEYS_URI = 'https://api.github.com/meta/public_keys/copilot_api';
 
+interface ECDSASignature {
+	r: Integer;
+	s: Integer;
+}
+
+const ecdsaSignatureSchema = new Sequence({
+	name: 'ECDSASignature',
+	value: [new Integer({ name: 'r' }), new Integer({ name: 's' })],
+});
+
 function padStart(data: Readonly<Uint8Array>, totalLength: number): Uint8Array {
 	if (data.length === totalLength) return data;
+	if (data.length === totalLength + 1 && data[0] === 0) return data.slice(1);
 	if (data.length > totalLength) {
-		if (data.length === totalLength + 1 && data[0] === 0) {
-			return data.slice(1);
-		}
 		throw new Error('Invalid data length for ECDSA signature component');
 	}
-	const result = new Uint8Array(totalLength);
-	result.set(data, totalLength - data.length);
-	return result;
+	return new Uint8Array([...new Array(totalLength - data.length).fill(0), ...data]);
 }
 
 function parseASN1Signature(signatureBuffer: Readonly<Uint8Array>): Uint8Array {
-	const asn1 = fromBER(signatureBuffer.buffer as ArrayBuffer);
-	if (asn1.offset === -1) throw new Error('Failed to parse signature');
+	const result = verifySchema(signatureBuffer, ecdsaSignatureSchema);
+	if (!result.verified) {
+		throw new Error('Invalid ASN.1 signature format');
+	}
 
-	const [r, s] = (asn1.result as Sequence).valueBlock.value;
+	const signature = result.result as unknown as ECDSASignature;
+	const rBytes = padStart(signature.r.valueBlock.valueHexView, 32);
+	const sBytes = padStart(signature.s.valueBlock.valueHexView, 32);
 
-	return new Uint8Array([
-		...padStart(new Uint8Array((r as Integer).valueBlock.valueHexView), 32),
-		...padStart(new Uint8Array((s as Integer).valueBlock.valueHexView), 32),
-	]);
+	return new Uint8Array([...rBytes, ...sBytes]);
 }
 
 type MiddlewareReturn = Promise<Response | void>;
