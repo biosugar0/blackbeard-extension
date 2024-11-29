@@ -11,7 +11,8 @@ interface GitHubKeysPayload {
 
 const GITHUB_KEYS_URI = 'https://api.github.com/meta/public_keys/copilot_api';
 
-interface ECDSASignature {
+// asn1Signature is a struct for ASN.1 serializing/parsing signatures.
+interface asn1Signature {
 	r: Integer;
 	s: Integer;
 }
@@ -36,7 +37,7 @@ function parseASN1Signature(signatureBuffer: Readonly<Uint8Array>): Uint8Array {
 		throw new Error('Invalid ASN.1 signature format');
 	}
 
-	const signature = result.result as unknown as ECDSASignature;
+	const signature = result.result as unknown as asn1Signature;
 	const rBytes = padStart(signature.r.valueBlock.valueHexView, 32);
 	const sBytes = padStart(signature.s.valueBlock.valueHexView, 32);
 
