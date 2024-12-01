@@ -24,7 +24,8 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 ];
 
 async function getWeather(city: string) {
-	return `The weather in ${city} is 25°C and rainy.`;
+	console.log('Getting weather for:', city);
+	return `The weather in ${city} is -10°C and snowing.`;
 }
 
 async function callTool(tool_call: OpenAI.Chat.Completions.ChatCompletionMessageToolCall): Promise<any> {
@@ -47,6 +48,7 @@ export const handlePost = async (c: Context) => {
 	const octokit = new Octokit({ auth: tokenForUser });
 	const body = await c.req.json();
 	const messages = body.messages || [];
+	console.log('Payload:', body);
 
 	try {
 		const user = await octokit.request('GET /user');
@@ -75,9 +77,9 @@ export const handlePost = async (c: Context) => {
 
 					const toolMessage = {
 						content: toolResultContent,
-						role: 'assistant',
+						role: 'system',
 					};
-					messages.push(toolMessage);
+					messages.unshift(toolMessage);
 				}
 			}
 		} catch (error) {

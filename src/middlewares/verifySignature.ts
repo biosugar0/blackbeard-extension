@@ -56,7 +56,6 @@ export const verifySignature = async (c: Context, next: Next): MiddlewareReturn 
 	}
 
 	const body = await c.req.text();
-
 	const response = await fetch(GITHUB_KEYS_URI, {
 		headers: {
 			'User-Agent': 'Your-App-Name/0.0.1',
